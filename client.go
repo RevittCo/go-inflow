@@ -34,6 +34,15 @@ func WithNoDelay(ctx context.Context) context.Context {
 	return context.WithValue(ctx, delayContextKey, d)
 }
 
+// RateLimitEvent contains details about a rate limit (429) response.
+type RateLimitEvent struct {
+	Path       string
+	Method     string
+	Attempt    int
+	MaxRetries int
+	RetryDelay time.Duration
+}
+
 type Client struct {
 	httpClient   *http.Client
 	baseURL      string
@@ -43,6 +52,7 @@ type Client struct {
 	retryBase    time.Duration
 	retryFactor  float64
 	requestDelay time.Duration
+	onRateLimit  func(event RateLimitEvent)
 }
 
 func NewClient(apiKey string, opts ...Option) *Client {
@@ -117,25 +127,25 @@ func (c *Client) do(ctx context.Context, method, path string, body io.Reader) ([
 }
 
 func (c *Client) Get(ctx context.Context, path string) ([]byte, error) {
-	return c.doWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+	return c.doWithRetry(ctx, http.MethodGet, path, func(ctx context.Context) ([]byte, error) {
 		return c.do(ctx, http.MethodGet, path, nil)
 	})
 }
 
 func (c *Client) Post(ctx context.Context, path string, body io.Reader) ([]byte, error) {
-	return c.doWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+	return c.doWithRetry(ctx, http.MethodPost, path, func(ctx context.Context) ([]byte, error) {
 		return c.do(ctx, http.MethodPost, path, body)
 	})
 }
 
 func (c *Client) Put(ctx context.Context, path string, body io.Reader) ([]byte, error) {
-	return c.doWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+	return c.doWithRetry(ctx, http.MethodPut, path, func(ctx context.Context) ([]byte, error) {
 		return c.do(ctx, http.MethodPut, path, body)
 	})
 }
 
 func (c *Client) Delete(ctx context.Context, path string) ([]byte, error) {
-	return c.doWithRetry(ctx, func(ctx context.Context) ([]byte, error) {
+	return c.doWithRetry(ctx, http.MethodDelete, path, func(ctx context.Context) ([]byte, error) {
 		return c.do(ctx, http.MethodDelete, path, nil)
 	})
 }
