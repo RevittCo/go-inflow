@@ -44,15 +44,15 @@ type RateLimitEvent struct {
 }
 
 type Client struct {
-	httpClient    *http.Client
-	baseURL       string
-	apiKey        string
-	limiter       *rate.Limiter
-	maxRetries    int
-	retryBase     time.Duration
-	retryFactor   float64
-	requestDelay  time.Duration
-	onRateLimit   func(event RateLimitEvent)
+	httpClient   *http.Client
+	baseURL      string
+	apiKey       string
+	limiter      *rate.Limiter
+	maxRetries   int
+	retryBase    time.Duration
+	retryFactor  float64
+	requestDelay time.Duration
+	onRateLimit  func(event RateLimitEvent)
 }
 
 func NewClient(apiKey string, opts ...Option) *Client {
