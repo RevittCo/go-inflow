@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (c *Client) doWithRetry(ctx context.Context, fn func(ctx context.Context) ([]byte, error)) ([]byte, error) {
+func (c *Client) doWithRetry(ctx context.Context, method, path string, fn func(ctx context.Context) ([]byte, error)) ([]byte, error) {
 	var lastErr error
 	delay := c.retryBase
 
@@ -22,6 +22,16 @@ func (c *Client) doWithRetry(ctx context.Context, fn func(ctx context.Context) (
 		}
 
 		lastErr = err
+
+		if c.onRateLimit != nil {
+			c.onRateLimit(RateLimitEvent{
+				Path:       path,
+				Method:     method,
+				Attempt:    attempt + 1,
+				MaxRetries: c.maxRetries,
+				RetryDelay: delay,
+			})
+		}
 
 		if attempt == c.maxRetries {
 			break

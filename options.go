@@ -51,3 +51,7 @@ func WithNoRateLimit() Option {
 func WithRequestDelay(d time.Duration) Option {
 	return func(c *Client) { c.requestDelay = d }
 }
+
+func WithOnRateLimit(fn func(event RateLimitEvent)) Option {
+	return func(c *Client) { c.onRateLimit = fn }
+}
