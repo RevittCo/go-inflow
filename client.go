@@ -43,16 +43,24 @@ type RateLimitEvent struct {
 	RetryDelay time.Duration
 }
 
+// RetrySuccessEvent contains details about a request that succeeded after rate limit retries.
+type RetrySuccessEvent struct {
+	Path     string
+	Method   string
+	Attempts int // total attempts including the successful one
+}
+
 type Client struct {
-	httpClient   *http.Client
-	baseURL      string
-	apiKey       string
-	limiter      *rate.Limiter
-	maxRetries   int
-	retryBase    time.Duration
-	retryFactor  float64
-	requestDelay time.Duration
-	onRateLimit  func(event RateLimitEvent)
+	httpClient     *http.Client
+	baseURL        string
+	apiKey         string
+	limiter        *rate.Limiter
+	maxRetries     int
+	retryBase      time.Duration
+	retryFactor    float64
+	requestDelay   time.Duration
+	onRateLimit    func(event RateLimitEvent)
+	onRetrySuccess func(event RetrySuccessEvent)
 }
 
 func NewClient(apiKey string, opts ...Option) *Client {
