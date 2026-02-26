@@ -312,6 +312,76 @@ func TestRequestDelay_NoDelayOverride(t *testing.T) {
 	}
 }
 
+func TestOnRetrySuccess_Called(t *testing.T) {
+	var calls atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		if n <= 2 {
+			w.WriteHeader(429)
+			return
+		}
+		w.WriteHeader(200)
+		w.Write([]byte(`ok`))
+	}))
+	defer server.Close()
+
+	var event *RetrySuccessEvent
+	client := NewClient("test-key",
+		WithBaseURL(server.URL+"/"),
+		WithNoRateLimit(),
+		WithRetry(3, 10*time.Millisecond, 1.0),
+		WithOnRetrySuccess(func(e RetrySuccessEvent) {
+			event = &e
+		}),
+	)
+
+	data, err := client.Get(context.Background(), "test/endpoint")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(data) != "ok" {
+		t.Errorf("expected ok, got %s", string(data))
+	}
+	if event == nil {
+		t.Fatal("expected OnRetrySuccess callback to be called")
+	}
+	if event.Attempts != 3 {
+		t.Errorf("expected 3 attempts, got %d", event.Attempts)
+	}
+	if event.Method != http.MethodGet {
+		t.Errorf("expected GET, got %s", event.Method)
+	}
+	if event.Path != "test/endpoint" {
+		t.Errorf("expected test/endpoint, got %s", event.Path)
+	}
+}
+
+func TestOnRetrySuccess_NotCalledOnFirstAttempt(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+		w.Write([]byte(`ok`))
+	}))
+	defer server.Close()
+
+	called := false
+	client := NewClient("test-key",
+		WithBaseURL(server.URL+"/"),
+		WithNoRateLimit(),
+		WithOnRetrySuccess(func(e RetrySuccessEvent) {
+			called = true
+		}),
+	)
+
+	_, err := client.Get(context.Background(), "test/endpoint")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if called {
+		t.Error("OnRetrySuccess should not be called when request succeeds on first attempt")
+	}
+}
+
 func TestRetryContextCancellation(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(429)

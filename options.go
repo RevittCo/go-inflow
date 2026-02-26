@@ -55,3 +55,7 @@ func WithRequestDelay(d time.Duration) Option {
 func WithOnRateLimit(fn func(event RateLimitEvent)) Option {
 	return func(c *Client) { c.onRateLimit = fn }
 }
+
+func WithOnRetrySuccess(fn func(event RetrySuccessEvent)) Option {
+	return func(c *Client) { c.onRetrySuccess = fn }
+}

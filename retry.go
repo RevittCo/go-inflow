@@ -14,6 +14,13 @@ func (c *Client) doWithRetry(ctx context.Context, method, path string, fn func(c
 	for attempt := 0; attempt <= c.maxRetries; attempt++ {
 		res, err := fn(ctx)
 		if err == nil {
+			if attempt > 0 && c.onRetrySuccess != nil {
+				c.onRetrySuccess(RetrySuccessEvent{
+					Path:     path,
+					Method:   method,
+					Attempts: attempt + 1,
+				})
+			}
 			return res, nil
 		}
 
